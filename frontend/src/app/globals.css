@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: "Segoe UI", system-ui, sans-serif;
+  --font-display: Georgia, "Times New Roman", serif;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: #f6efe4;
+  color: #1c1410;
+}
+
+.card {
+  @apply rounded-2xl border border-roast-700/10 bg-white shadow-sm;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition;
+}
+
+.btn-primary {
+  @apply btn bg-roast-800 text-cream hover:bg-roast-700;
+}
+
+.btn-ghost {
+  @apply btn border border-roast-700/15 bg-white hover:bg-cream;
+}
+
+.input {
+  @apply w-full rounded-xl border border-roast-700/15 bg-white px-3 py-2.5 text-sm outline-none ring-gold-500/40 focus:ring-2;
+}
+
+.label {
+  @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-roast-600;
+}
+
+.badge {
+  @apply inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold;
+}

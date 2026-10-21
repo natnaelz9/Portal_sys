@@ -1,0 +1,664 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  PROCUREMENT
+  WAREHOUSE
+  QUALITY
+  EXPORT
+  FINANCE
+  HR
+  STAFF
+}
+
+enum SupplierType {
+  FARMER
+  COOPERATIVE
+  LOCAL_SUPPLIER
+  WASHING_STATION
+}
+
+enum ProcessType {
+  WASHED
+  NATURAL
+  HONEY
+  PULPED_NATURAL
+}
+
+enum ApprovalStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum OrderStatus {
+  DRAFT
+  CONFIRMED
+  PARTIAL
+  FULFILLED
+  CANCELLED
+}
+
+enum ShipmentStatus {
+  PLANNED
+  IN_TRANSIT
+  ARRIVED
+  DELIVERED
+  DELAYED
+}
+
+enum DocumentType {
+  COMMERCIAL_INVOICE
+  PACKING_LIST
+  EXPORT_PERMIT
+  CERTIFICATE_OF_ORIGIN
+  PHYTOSANITARY
+  QUALITY_CERTIFICATE
+  BILL_OF_LADING
+  SHIPPING_INSTRUCTIONS
+  CUSTOMS
+}
+
+enum DocumentStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  ATTACHED
+}
+
+enum AccountType {
+  CASH
+  BANK
+  RECEIVABLE
+  PAYABLE
+}
+
+enum TxType {
+  PURCHASE
+  SALE
+  EXPENSE
+  PAYMENT
+  RECEIPT
+  FX_GAIN
+  FX_LOSS
+  ADJUSTMENT
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum StockStatus {
+  AVAILABLE
+  RESERVED
+  DAMAGED
+  EXPORTED
+  REJECTED
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  password     String
+  fullName     String
+  role         Role       @default(STAFF)
+  isActive     Boolean    @default(true)
+  employee     Employee?
+  activityLogs ActivityLog[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Department {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  code      String     @unique
+  employees Employee[]
+}
+
+model Employee {
+  id           String       @id @default(uuid())
+  employeeNo   String       @unique
+  fullName     String
+  email        String       @unique
+  phone        String?
+  position     String
+  hireDate     DateTime
+  salary       Decimal      @db.Decimal(12, 2)
+  departmentId String
+  department   Department   @relation(fields: [departmentId], references: [id])
+  userId       String?      @unique
+  user         User?        @relation(fields: [userId], references: [id])
+  attendance   Attendance[]
+  leaves       Leave[]
+  shifts       Shift[]
+  assignments  Assignment[]
+  evaluations  PerformanceEval[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model Attendance {
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  date       DateTime @db.Date
+  checkIn    DateTime?
+  checkOut   DateTime?
+  status     String   @default("PRESENT")
+
+  @@unique([employeeId, date])
+}
+
+model Leave {
+  id         String      @id @default(uuid())
+  employeeId String
+  employee   Employee    @relation(fields: [employeeId], references: [id])
+  type       String
+  startDate  DateTime    @db.Date
+  endDate    DateTime    @db.Date
+  reason     String?
+  status     LeaveStatus @default(PENDING)
+}
+
+model Shift {
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  date       DateTime @db.Date
+  startTime  String
+  endTime    String
+  location   String?
+}
+
+model Assignment {
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  title      String
+  details    String?
+  dueDate    DateTime?
+  status     String   @default("OPEN")
+}
+
+model PerformanceEval {
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  period     String
+  score      Decimal  @db.Decimal(5, 2)
+  comments   String?
+  createdAt  DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  createdAt DateTime @default(now())
+}
+
+model Country {
+  id     String  @id @default(uuid())
+  name   String  @unique
+  code   String  @unique
+  buyers Buyer[]
+}
+
+model Farmer {
+  id           String     @id @default(uuid())
+  code         String     @unique
+  fullName     String
+  phone        String?
+  kebele       String?
+  woreda       String?
+  zone         String?
+  region       String
+  farmSizeHa   Decimal?   @db.Decimal(10, 2)
+  variety      String?
+  supplierId   String?
+  supplier     Supplier?  @relation(fields: [supplierId], references: [id])
+  purchases    Purchase[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Supplier {
+  id            String              @id @default(uuid())
+  code          String              @unique
+  name          String
+  type          SupplierType
+  phone         String?
+  email         String?
+  address       String?
+  region        String?
+  origin        String?
+  contactName   String?
+  contactPhone  String?
+  farmers       Farmer[]
+  sites         Site[]
+  stations      WashingStation[]
+  contracts     SupplierContract[]
+  payments      SupplierPayment[]
+  evaluations   SupplierEval[]
+  purchases     Purchase[]
+  purchaseOrders PurchaseOrder[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+}
+
+model Site {
+  id         String   @id @default(uuid())
+  name       String
+  location   String
+  altitudeM  Int?
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+}
+
+model WashingStation {
+  id         String   @id @default(uuid())
+  name       String
+  location   String
+  capacityKg Decimal? @db.Decimal(12, 2)
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+}
+
+model SupplierContract {
+  id         String         @id @default(uuid())
+  number     String         @unique
+  supplierId String
+  supplier   Supplier       @relation(fields: [supplierId], references: [id])
+  startDate  DateTime       @db.Date
+  endDate    DateTime       @db.Date
+  volumeKg   Decimal        @db.Decimal(12, 2)
+  unitPrice  Decimal        @db.Decimal(12, 2)
+  currency   String         @default("ETB")
+  status     ApprovalStatus @default(DRAFT)
+}
+
+model SupplierPayment {
+  id         String   @id @default(uuid())
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  purchaseId String?
+  purchase   Purchase? @relation(fields: [purchaseId], references: [id])
+  amount     Decimal  @db.Decimal(12, 2)
+  currency   String   @default("ETB")
+  paidAt     DateTime
+  method     String
+  reference  String?
+}
+
+model SupplierEval {
+  id         String   @id @default(uuid())
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  period     String
+  quality    Decimal  @db.Decimal(5, 2)
+  delivery   Decimal  @db.Decimal(5, 2)
+  reliability Decimal @db.Decimal(5, 2)
+  notes      String?
+  createdAt  DateTime @default(now())
+}
+
+model Warehouse {
+  id          String        @id @default(uuid())
+  code        String        @unique
+  name        String
+  location    String
+  capacityKg  Decimal       @db.Decimal(14, 2)
+  batches     StockBatch[]
+  fromTransfers StockTransfer[] @relation("FromWarehouse")
+  toTransfers   StockTransfer[] @relation("ToWarehouse")
+  purchases   Purchase[]
+}
+
+model PurchaseOrder {
+  id         String         @id @default(uuid())
+  number     String         @unique
+  supplierId String
+  supplier   Supplier       @relation(fields: [supplierId], references: [id])
+  orderDate  DateTime       @default(now())
+  process    ProcessType
+  grade      String
+  quantityKg Decimal        @db.Decimal(12, 2)
+  unitPrice  Decimal        @db.Decimal(12, 2)
+  status     ApprovalStatus @default(DRAFT)
+  purchases  Purchase[]
+}
+
+model Purchase {
+  id            String         @id @default(uuid())
+  number        String         @unique
+  supplierId    String
+  supplier      Supplier       @relation(fields: [supplierId], references: [id])
+  farmerId      String?
+  farmer        Farmer?        @relation(fields: [farmerId], references: [id])
+  warehouseId   String
+  warehouse     Warehouse      @relation(fields: [warehouseId], references: [id])
+  purchaseOrderId String?
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  purchaseDate  DateTime
+  origin        String
+  process       ProcessType
+  grade         String
+  bags          Int
+  quantityKg    Decimal        @db.Decimal(12, 2)
+  moisturePct   Decimal        @db.Decimal(5, 2)
+  unitPrice     Decimal        @db.Decimal(12, 2)
+  currency      String         @default("ETB")
+  inspection    String?
+  status        ApprovalStatus @default(PENDING)
+  receiptNo     String?
+  payments      SupplierPayment[]
+  batches       StockBatch[]
+  samples       QualitySample[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model StockBatch {
+  id            String      @id @default(uuid())
+  lotNumber     String      @unique
+  warehouseId   String
+  warehouse     Warehouse   @relation(fields: [warehouseId], references: [id])
+  purchaseId    String?
+  purchase      Purchase?   @relation(fields: [purchaseId], references: [id])
+  origin        String
+  process       ProcessType
+  grade         String
+  bags          Int
+  quantityKg    Decimal     @db.Decimal(12, 2)
+  moisturePct   Decimal     @db.Decimal(5, 2)
+  unitValue     Decimal     @db.Decimal(12, 2)
+  currency      String      @default("ETB")
+  receivedAt    DateTime
+  status        StockStatus @default(AVAILABLE)
+  bagsDetail    CoffeeBag[]
+  transfers     StockTransfer[]
+  adjustments   StockAdjustment[]
+  damages       DamagedStock[]
+  samples       QualitySample[]
+  shipmentLots  ShipmentLot[]
+}
+
+model CoffeeBag {
+  id       String     @id @default(uuid())
+  bagNo    String
+  weightKg Decimal    @db.Decimal(8, 2)
+  batchId  String
+  batch    StockBatch @relation(fields: [batchId], references: [id])
+}
+
+model StockTransfer {
+  id             String     @id @default(uuid())
+  batchId        String
+  batch          StockBatch @relation(fields: [batchId], references: [id])
+  fromWarehouseId String
+  fromWarehouse  Warehouse  @relation("FromWarehouse", fields: [fromWarehouseId], references: [id])
+  toWarehouseId  String
+  toWarehouse    Warehouse  @relation("ToWarehouse", fields: [toWarehouseId], references: [id])
+  quantityKg     Decimal    @db.Decimal(12, 2)
+  bags           Int
+  transferredAt  DateTime
+  notes          String?
+}
+
+model StockAdjustment {
+  id         String     @id @default(uuid())
+  batchId    String
+  batch      StockBatch @relation(fields: [batchId], references: [id])
+  quantityKg Decimal    @db.Decimal(12, 2)
+  reason     String
+  adjustedAt DateTime   @default(now())
+}
+
+model DamagedStock {
+  id         String     @id @default(uuid())
+  batchId    String
+  batch      StockBatch @relation(fields: [batchId], references: [id])
+  quantityKg Decimal    @db.Decimal(12, 2)
+  bags       Int
+  reason     String
+  reportedAt DateTime   @default(now())
+}
+
+model QualitySample {
+  id         String     @id @default(uuid())
+  code       String     @unique
+  batchId    String?
+  batch      StockBatch? @relation(fields: [batchId], references: [id])
+  purchaseId String?
+  purchase   Purchase?  @relation(fields: [purchaseId], references: [id])
+  takenAt    DateTime   @default(now())
+  notes      String?
+  tests      QualityTest[]
+}
+
+model QualityTest {
+  id           String         @id @default(uuid())
+  sampleId     String
+  sample       QualitySample  @relation(fields: [sampleId], references: [id])
+  testedAt     DateTime       @default(now())
+  moisturePct  Decimal        @db.Decimal(5, 2)
+  cupScore     Decimal        @db.Decimal(5, 2)
+  aroma        String?
+  acidity      String?
+  body         String?
+  flavor       String?
+  defectCount  Int            @default(0)
+  defectNotes  String?
+  gradeResult  String
+  passed       Boolean
+  labNotes     String?
+  certificates QualityCertificate[]
+  rejections   RejectedBatch[]
+}
+
+model QualityCertificate {
+  id         String      @id @default(uuid())
+  number     String      @unique
+  testId     String
+  test       QualityTest @relation(fields: [testId], references: [id])
+  issuer     String
+  issuedAt   DateTime
+  expiresAt  DateTime?
+  documents  ExportDocument[]
+}
+
+model RejectedBatch {
+  id       String      @id @default(uuid())
+  testId   String
+  test     QualityTest @relation(fields: [testId], references: [id])
+  reason   String
+  action   String
+  createdAt DateTime   @default(now())
+}
+
+model Buyer {
+  id             String           @id @default(uuid())
+  code           String           @unique
+  name           String
+  countryId      String
+  country        Country          @relation(fields: [countryId], references: [id])
+  email          String?
+  phone          String?
+  address        String?
+  creditLimit    Decimal          @db.Decimal(14, 2) @default(0)
+  currency       String           @default("USD")
+  notes          String?
+  contacts       BuyerContact[]
+  agreements     PriceAgreement[]
+  contracts      ExportContract[]
+  communications BuyerNote[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+model BuyerContact {
+  id      String @id @default(uuid())
+  buyerId String
+  buyer   Buyer  @relation(fields: [buyerId], references: [id])
+  name    String
+  role    String?
+  email   String?
+  phone   String?
+}
+
+model PriceAgreement {
+  id        String   @id @default(uuid())
+  buyerId   String
+  buyer     Buyer    @relation(fields: [buyerId], references: [id])
+  grade     String
+  process   ProcessType
+  priceUsd  Decimal  @db.Decimal(12, 2)
+  validFrom DateTime @db.Date
+  validTo   DateTime @db.Date
+}
+
+model BuyerNote {
+  id        String   @id @default(uuid())
+  buyerId   String
+  buyer     Buyer    @relation(fields: [buyerId], references: [id])
+  subject   String
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model ExportContract {
+  id         String      @id @default(uuid())
+  number     String      @unique
+  buyerId    String
+  buyer      Buyer       @relation(fields: [buyerId], references: [id])
+  signedAt   DateTime    @db.Date
+  origin     String
+  process    ProcessType
+  grade      String
+  quantityKg Decimal     @db.Decimal(12, 2)
+  shippedKg  Decimal     @db.Decimal(12, 2) @default(0)
+  unitPrice  Decimal     @db.Decimal(12, 2)
+  currency   String      @default("USD")
+  incoterm   String
+  status     OrderStatus @default(CONFIRMED)
+  orders     SalesOrder[]
+}
+
+model SalesOrder {
+  id           String         @id @default(uuid())
+  number       String         @unique
+  contractId   String
+  contract     ExportContract @relation(fields: [contractId], references: [id])
+  orderDate    DateTime
+  quantityKg   Decimal        @db.Decimal(12, 2)
+  deliveryDate DateTime?
+  status       OrderStatus    @default(CONFIRMED)
+  notes        String?
+  shipments    Shipment[]
+  invoices     Invoice[]
+}
+
+model Shipment {
+  id            String         @id @default(uuid())
+  number        String         @unique
+  salesOrderId  String
+  salesOrder    SalesOrder     @relation(fields: [salesOrderId], references: [id])
+  vessel        String?
+  originPort    String         @default("Djibouti")
+  destPort      String
+  etd           DateTime?
+  eta           DateTime?
+  quantityKg    Decimal        @db.Decimal(12, 2)
+  bags          Int
+  status        ShipmentStatus @default(PLANNED)
+  lots          ShipmentLot[]
+  documents     ExportDocument[]
+  createdAt     DateTime       @default(now())
+}
+
+model ShipmentLot {
+  id         String     @id @default(uuid())
+  shipmentId String
+  shipment   Shipment   @relation(fields: [shipmentId], references: [id])
+  batchId    String
+  batch      StockBatch @relation(fields: [batchId], references: [id])
+  quantityKg Decimal    @db.Decimal(12, 2)
+  bags       Int
+}
+
+model ExportDocument {
+  id          String           @id @default(uuid())
+  shipmentId  String?
+  shipment    Shipment?        @relation(fields: [shipmentId], references: [id])
+  certificateId String?
+  certificate QualityCertificate? @relation(fields: [certificateId], references: [id])
+  type        DocumentType
+  title       String
+  status      DocumentStatus   @default(DRAFT)
+  fileName    String?
+  notes       String?
+  approvedAt  DateTime?
+  createdAt   DateTime         @default(now())
+}
+
+model Account {
+  id           String        @id @default(uuid())
+  code         String        @unique
+  name         String
+  type         AccountType
+  currency     String
+  transactions Transaction[]
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  accountId   String
+  account     Account  @relation(fields: [accountId], references: [id])
+  type        TxType
+  amount      Decimal  @db.Decimal(14, 2)
+  currency    String
+  fxRate      Decimal? @db.Decimal(12, 4)
+  reference   String?
+  memo        String?
+  occurredAt  DateTime
+  createdAt   DateTime @default(now())
+}
+
+model Expense {
+  id         String   @id @default(uuid())
+  category   String
+  amount     Decimal  @db.Decimal(12, 2)
+  currency   String   @default("ETB")
+  vendor     String?
+  occurredAt DateTime
+  notes      String?
+}
+
+model Invoice {
+  id           String     @id @default(uuid())
+  number       String     @unique
+  salesOrderId String?
+  salesOrder   SalesOrder? @relation(fields: [salesOrderId], references: [id])
+  kind         String
+  amount       Decimal    @db.Decimal(14, 2)
+  currency     String
+  issuedAt     DateTime
+  dueAt        DateTime?
+  status       String     @default("OPEN")
+}

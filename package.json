@@ -1,0 +1,26 @@
+{
+  "name": "temerachi-portal",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Temerachi Coffee Export Management System",
+  "workspaces": [
+    "frontend",
+    "backend",
+    "database"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c cyan,magenta \"npm run start:dev -w backend\" \"npm run dev -w frontend\"",
+    "dev:backend": "npm run start:dev -w backend",
+    "dev:frontend": "npm run dev -w frontend",
+    "build": "npm run build -w backend && npm run build -w frontend",
+    "db:up": "docker compose -f database/docker-compose.yml up -d",
+    "db:generate": "npm run generate -w database",
+    "db:migrate": "npm run migrate -w database",
+    "db:seed": "npm run seed -w database",
+    "db:push": "npm run push -w database",
+    "db:studio": "npm run studio -w database"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
